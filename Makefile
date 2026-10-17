@@ -22,6 +22,7 @@ include agent.cpp/BUILD.mk
 include llamafile/BUILD.mk
 include whisperfile/BUILD.mk
 include transcribefile/BUILD.mk
+include ttsfile/BUILD.mk
 include diffusionfile/BUILD.mk
 include agentfile/BUILD.mk
 include tests/BUILD.mk
