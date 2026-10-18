@@ -13,8 +13,9 @@
 # Opt-in: not part of the default o/$(MODE)/ target. Build with
 #
 #   make o//ttsfile                      # the executable
-#   make o//ttsfile/argv_utils_test.runs o//ttsfile/job_queue_test.runs \
-#        o//ttsfile/speech_request_test.runs
+#   make o//ttsfile/argv_utils_test.runs o//ttsfile/audio_channel_test.runs \
+#        o//ttsfile/audio_encode_test.runs o//ttsfile/job_queue_test.runs \
+#        o//ttsfile/speech_request_test.runs o//ttsfile/stream_response_test.runs
 #
 # (the unit tests need no model and no GPU.)
 
@@ -34,8 +35,11 @@ TTSFILE_OBJS     := $(TTSFILE_SRCS_CPP:%.cpp=o/$(MODE)/%.cpp.o)
 # <nlohmann/json.hpp> include.
 TTSFILE_DEP_HDRS := \
 	ttsfile/argv_utils.h \
+	ttsfile/audio_channel.h \
+	ttsfile/audio_encode.h \
 	ttsfile/job_queue.h \
-	ttsfile/speech_request.h
+	ttsfile/speech_request.h \
+	ttsfile/stream_response.h
 
 # Same include set as the llama.cpp tools. main.cpp pulls in httplib, so it
 # must be built with the same TLS macro as httplib.cpp (the macro changes the
@@ -98,7 +102,7 @@ o/$(MODE)/ttsfile/ttsfile: \
 # Unit tests (no model required)
 # ==============================================================================
 
-TTSFILE_TEST_NAMES := argv_utils_test job_queue_test speech_request_test
+TTSFILE_TEST_NAMES := argv_utils_test audio_channel_test audio_encode_test job_queue_test speech_request_test
 TTSFILE_TEST_OBJS  := $(TTSFILE_TEST_NAMES:%=o/$(MODE)/ttsfile/%.cpp.o)
 
 $(TTSFILE_TEST_OBJS): o/$(MODE)/ttsfile/%.cpp.o: ttsfile/%.cpp ttsfile/BUILD.mk $(TTSFILE_DEP_HDRS) $(COSMOCC)
@@ -111,6 +115,25 @@ $(TTSFILE_TEST_NAMES:%=o/$(MODE)/ttsfile/%): o/$(MODE)/ttsfile/%: o/$(MODE)/ttsf
 	$(LINK.o) $< $(LOADLIBES) $(LDLIBS) -o $@
 
 $(TTSFILE_TEST_NAMES:%=o/$(MODE)/ttsfile/%.runs): o/$(MODE)/ttsfile/%.runs: o/$(MODE)/ttsfile/%
+	$<
+	@touch $@
+
+# stream_response_test runs a real httplib server on a loopback port, so like
+# main.cpp it must be compiled with the TLS macro (the macro changes httplib's
+# class layouts) and linked against the same httplib objects and mbedtls.
+o/$(MODE)/ttsfile/stream_response_test.cpp.o: ttsfile/stream_response_test.cpp ttsfile/BUILD.mk $(TTSFILE_DEP_HDRS) $(COSMOCC)
+	@mkdir -p $(@D)
+	$(COMPILE.cc) $(TTSFILE_INCLUDES) $(TTSFILE_CPPFLAGS) -o $@ $<
+
+o/$(MODE)/ttsfile/stream_response_test: private LDLIBS += -lpthread
+o/$(MODE)/ttsfile/stream_response_test: \
+		o/$(MODE)/ttsfile/stream_response_test.cpp.o \
+		$(HTTPLIB_OBJS) \
+		o/$(MODE)/third_party/mbedtls/mbedtls.a
+	@mkdir -p $(@D)
+	$(LINK.o) $^ $(LOADLIBES) $(LDLIBS) -o $@
+
+o/$(MODE)/ttsfile/stream_response_test.runs: o/$(MODE)/ttsfile/stream_response_test
 	$<
 	@touch $@
 

@@ -47,8 +47,10 @@ namespace ttsfile {
 constexpr size_t kMaxInputBytes = 2000;
 
 struct speech_request {
-    std::string input;  // trimmed text to synthesize
-    std::string lang;   // lower-case ISO 639-1 code, empty = server default
+    std::string input;           // trimmed text to synthesize
+    std::string lang;            // lower-case ISO 639-1 code, empty = server default
+    std::string format = "wav";  // "wav" or "pcm" (raw s16le, mono)
+    bool        stream = false;  // true = chunked response while generating
 };
 
 namespace detail {
@@ -91,11 +93,23 @@ inline std::string parse_speech_request(const std::string & body,
                std::to_string(max_input_bytes) + ")";
     }
 
+    std::string format = "wav";
     it = j.find("response_format");
     if (it != j.end() && !it->is_null()) {
-        if (!it->is_string() || it->get<std::string>() != "wav") {
-            return "unsupported \"response_format\": only \"wav\" is supported";
+        if (!it->is_string() ||
+            (it->get<std::string>() != "wav" && it->get<std::string>() != "pcm")) {
+            return "unsupported \"response_format\": use \"wav\" or \"pcm\"";
         }
+        format = it->get<std::string>();
+    }
+
+    bool stream = false;
+    it = j.find("stream");
+    if (it != j.end() && !it->is_null()) {
+        if (!it->is_boolean()) {
+            return "\"stream\" must be true or false";
+        }
+        stream = it->get<bool>();
     }
 
     std::string lang;
@@ -117,8 +131,10 @@ inline std::string parse_speech_request(const std::string & body,
         }
     }
 
-    out.input = std::move(input);
-    out.lang  = std::move(lang);
+    out.input  = std::move(input);
+    out.lang   = std::move(lang);
+    out.format = std::move(format);
+    out.stream = stream;
     return "";
 }
 

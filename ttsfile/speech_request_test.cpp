@@ -50,8 +50,24 @@ int main() {
 
     // null optionals behave like absent ones
     r = {};
-    CHECK(parse(R"({"input":"Hi","language":null,"response_format":null})", r).empty());
-    CHECK(r.lang.empty());
+    CHECK(parse(R"({"input":"Hi","language":null,"response_format":null,"stream":null})", r).empty());
+    CHECK(r.lang.empty() && r.format == "wav" && !r.stream);
+
+    // defaults
+    r = {};
+    CHECK(parse(R"({"input":"Hi"})", r).empty());
+    CHECK(r.format == "wav" && !r.stream);
+
+    // pcm and streaming
+    r = {};
+    CHECK(parse(R"({"input":"Hi","response_format":"pcm","stream":true})", r).empty());
+    CHECK(r.format == "pcm" && r.stream);
+    r = {};
+    CHECK(parse(R"({"input":"Hi","stream":true})", r).empty());
+    CHECK(r.format == "wav" && r.stream);
+    r = {};
+    CHECK(parse(R"({"input":"Hi","stream":false,"response_format":"wav"})", r).empty());
+    CHECK(!r.stream);
 
     // unicode input passes through untouched
     r = {};
@@ -70,6 +86,9 @@ int main() {
         R"({"input":"   \t\n "})",                   // whitespace only
         R"({"input":"x","response_format":"mp3"})",  // unsupported format
         R"({"input":"x","response_format":1})",      // wrong type
+        R"({"input":"x","response_format":"WAV"})",  // case-sensitive
+        R"({"input":"x","stream":"yes"})",           // not a boolean
+        R"({"input":"x","stream":1})",               // not a boolean
         R"({"input":"x","language":"english"})",     // not ISO 639-1
         R"({"input":"x","language":"e"})",           // too short
         R"({"input":"x","language":"e1"})",          // non-alpha

@@ -17,6 +17,7 @@
 
 #include <cosmo.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "llamafile/llamafile.h"
 #include "llamafile/version.h"
@@ -34,8 +35,21 @@ int main(int argc, char ** argv) {
         return 0;
     }
 
-    // Load default arguments from embedded .args file (for packaged whisperfiles)
-    argc = cosmo_args("/zip/.args", &argv);
+    // When launched by a bundled speech application, its /zip/.args belongs
+    // to the parent program and contains unrelated options. Let that parent
+    // suppress this wrapper's defaults and pass the server arguments directly.
+    bool load_default_args = true;
+    for (int i = 1; i < argc; ++i) {
+        if (!strcmp(argv[i], "--no-default-args")) {
+            for (int j = i; j < argc; ++j) argv[j] = argv[j + 1];
+            --argc;
+            load_default_args = false;
+            break;
+        }
+    }
+
+    // Load default arguments from embedded .args file (for packaged whisperfiles).
+    if (load_default_args) argc = cosmo_args("/zip/.args", &argv);
 
     return whisper_server_main(argc, argv);
 }
