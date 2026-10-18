@@ -74,8 +74,13 @@ returns `{"status":"ok"}`.
   splits long text into chunks internally and decodes audio per chunk, so a
   streaming API looks feasible, but the public helper currently only exposes the
   accumulated result.
-* **CPU only in practice.** GPU loader wiring has not been checked for this
-  binary.
+* **GPU use is unverified.** `ttsfile` calls `llamafile_has_gpu()` at startup
+  (as `llamafile` itself does) so GPU backends can load, and keeps all inference
+  on the main thread, which llamafile's GPU backends require. Whether Metal/CUDA
+  actually engages, and whether it is faster for these models, has not been
+  measured. Before that call was added the binary ran CPU-only regardless of
+  `-ngl`. `ttsfile` uses its own cache directory (`~/.ttsfile/`) for the compiled
+  Metal library so it never reuses one built by a regular llamafile.
 * **No CORS headers**, so a browser page on another origin cannot call it yet.
 * **One voice per server process**, fixed at startup.
 * **No request cancellation**: a client that disconnects does not stop its job.

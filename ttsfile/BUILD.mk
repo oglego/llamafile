@@ -51,7 +51,13 @@ TTSFILE_INCLUDES := \
 	-isystem llama.cpp/vendor \
 	-isystem third_party/mbedtls/include
 
+# -DCOSMOCC=1 is required, not cosmetic: cosmocc itself only predefines
+# __COSMOCC__, and COSMOCC is otherwise just a Make variable. Every other
+# llamafile component passes it explicitly (llamafile/BUILD.mk,
+# agentfile/BUILD.mk). Without it main.cpp's #ifdef COSMOCC blocks
+# (ShowCrashReports, /zip/.args, app name, GPU loading) compile out silently.
 TTSFILE_CPPFLAGS := \
+	-DCOSMOCC=1 \
 	-DCPPHTTPLIB_MBEDTLS_SUPPORT \
 	-DTTSFILE_VERSION_STRING=\"$(TTSFILE_VERSION_STRING)\"
 
@@ -65,6 +71,14 @@ $(TTSFILE_OBJS): o/$(MODE)/%.cpp.o: %.cpp ttsfile/BUILD.mk $(TTSFILE_DEP_HDRS) $
 # Link line = llama-tts's: ttsfile objs + mtmd + httplib (download support in
 # common/) + the llamafile bridge objects that src/llama-mmap.cpp and
 # ggml/src/gguf.cpp call into + tinyblas + llama.cpp.a + mbedtls.
+#
+# LLAMAFILE_METAL_SOURCES (defined in llamafile/BUILD.mk) embeds the ggml-metal
+# sources in the executable's /zip. On macOS arm64, llamafile_has_gpu()
+# (llamafile/metal.c) extracts them to ~/.llamafile/, compiles a dylib with the
+# system cc, and loads it. Without them the loader has nothing to extract and
+# inference silently stays on the CPU, which is what happened before this was
+# added. The first GPU run compiles the dylib (needs Xcode command line tools:
+# xcode-select --install) and is slow; the result is cached.
 
 o/$(MODE)/ttsfile/ttsfile: private LDFLAGS += -fopenmp
 o/$(MODE)/ttsfile/ttsfile: private LDLIBS += -lpthread
@@ -73,6 +87,7 @@ o/$(MODE)/ttsfile/ttsfile: \
 		$(MTMD_OBJS) \
 		$(HTTPLIB_OBJS) \
 		$(TOOL_LLAMAFILE_OBJS) \
+		$(LLAMAFILE_METAL_SOURCES) \
 		$$(TINYBLAS_CPU_OBJS) \
 		o/$(MODE)/llama.cpp/llama.cpp.a \
 		o/$(MODE)/third_party/mbedtls/mbedtls.a

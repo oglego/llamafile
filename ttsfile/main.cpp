@@ -61,6 +61,7 @@
 
 #ifdef COSMOCC
 #include <cosmo.h>
+#include "llamafile/llamafile.h"
 #endif
 
 #ifndef TTSFILE_VERSION_STRING
@@ -350,8 +351,28 @@ int main(int argc, char ** argv) {
         return 1;
     }
 
+#ifdef COSMOCC
+    // Trigger llamafile's dynamic loading of GPU backends (Metal/CUDA/...),
+    // exactly as llamafile/main.cpp does before it loads a model. Without
+    // this call the backends are never brought in and inference silently
+    // runs on the CPU, whatever -ngl says. GPU work must stay on this
+    // (main) thread: run_server() already does all synthesis here.
+    // Own cache directory (~/.ttsfile/v/<version>/). The Metal dylib cache is
+    // keyed only by version number: if it were shared with a regular llamafile,
+    // ttsfile could silently reuse a dylib built from a different ggml tree.
+    llamafile_set_app_name("ttsfile");
+    const bool have_gpu = llamafile_has_gpu();
+#endif
+
     common_params params;
     common_init();
+#ifdef COSMOCC
+    // llamafile_has_gpu() returns false without printing anything for several
+    // reasons (not Apple silicon, --gpu disabled, kernels failed to build, no
+    // embedded Metal sources), so say what happened.
+    LOG_INF("llamafile GPU backend: %s (gpu mode: %s)\n",
+            have_gpu ? "loaded" : "NOT available, running on CPU", llamafile_describe_gpu());
+#endif
     if (!common_params_parse(argc, argv, params, LLAMA_EXAMPLE_TTS, print_usage)) {
         return 1;
     }
