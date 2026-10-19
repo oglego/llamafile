@@ -15,7 +15,8 @@
 #   make o//ttsfile                      # the executable
 #   make o//ttsfile/argv_utils_test.runs o//ttsfile/audio_channel_test.runs \
 #        o//ttsfile/audio_encode_test.runs o//ttsfile/job_queue_test.runs \
-#        o//ttsfile/speech_request_test.runs o//ttsfile/stream_response_test.runs
+#        o//ttsfile/languages_test.runs o//ttsfile/speech_request_test.runs \
+#        o//ttsfile/stream_response_test.runs
 #
 # (the unit tests need no model and no GPU.)
 
@@ -27,7 +28,12 @@ TTSFILE_VERSION_STRING := $(shell git describe --tags --always 2>/dev/null || ec
 # Sources
 # ==============================================================================
 
-TTSFILE_SRCS_CPP := ttsfile/main.cpp
+TTSFILE_SRCS_CPP := \
+	ttsfile/main.cpp \
+	ttsfile/synth.cpp \
+	ttsfile/tutor.cpp \
+	ttsfile/asr_process.cpp \
+	ttsfile/server.cpp
 TTSFILE_OBJS     := $(TTSFILE_SRCS_CPP:%.cpp=o/$(MODE)/%.cpp.o)
 
 # Rebuild triggers only. Deliberately NOT named TTSFILE_HDRS: PKGS *_HDRS are fed
@@ -35,11 +41,16 @@ TTSFILE_OBJS     := $(TTSFILE_SRCS_CPP:%.cpp=o/$(MODE)/%.cpp.o)
 # <nlohmann/json.hpp> include.
 TTSFILE_DEP_HDRS := \
 	ttsfile/argv_utils.h \
+	ttsfile/asr_process.h \
 	ttsfile/audio_channel.h \
 	ttsfile/audio_encode.h \
 	ttsfile/job_queue.h \
+	ttsfile/languages.h \
+	ttsfile/server.h \
 	ttsfile/speech_request.h \
-	ttsfile/stream_response.h
+	ttsfile/stream_response.h \
+	ttsfile/synth.h \
+	ttsfile/tutor.h
 
 # Same include set as the llama.cpp tools. main.cpp pulls in httplib, so it
 # must be built with the same TLS macro as httplib.cpp (the macro changes the
@@ -102,7 +113,7 @@ o/$(MODE)/ttsfile/ttsfile: \
 # Unit tests (no model required)
 # ==============================================================================
 
-TTSFILE_TEST_NAMES := argv_utils_test audio_channel_test audio_encode_test job_queue_test speech_request_test
+TTSFILE_TEST_NAMES := argv_utils_test audio_channel_test audio_encode_test job_queue_test languages_test speech_request_test
 TTSFILE_TEST_OBJS  := $(TTSFILE_TEST_NAMES:%=o/$(MODE)/ttsfile/%.cpp.o)
 
 $(TTSFILE_TEST_OBJS): o/$(MODE)/ttsfile/%.cpp.o: ttsfile/%.cpp ttsfile/BUILD.mk $(TTSFILE_DEP_HDRS) $(COSMOCC)

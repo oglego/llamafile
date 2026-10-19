@@ -175,6 +175,17 @@ If the client disconnects, the synthesis stops at the next chunk. A failure
 before any audio is produced returns a normal 500; a failure after the first
 byte aborts the connection, so the client sees a truncated transfer.
 
+## Source layout
+
+| File | Role |
+|---|---|
+| `main.cpp` | flags, model loading, one-shot mode |
+| `synth.{h,cpp}` | the synthesis loop (a close copy of upstream's `tools/tts/tts.cpp`; keep them in step) |
+| `server.{h,cpp}` | HTTP endpoints; HTTP threads queue jobs, the main thread runs them |
+| `tutor.{h,cpp}` | the speech tutor's chat model and conversation history |
+| `asr_process.{h,cpp}` | starting and stopping the bundled whisper-server |
+| `languages.h`, `speech_request.h`, `argv_utils.h`, `audio_*.h`, `job_queue.h`, `stream_response.h` | model-free helpers, each with a unit test |
+
 ## Known gaps
 
 * **Tested on one machine.** A Mac mini (M2, 8 GB) with Qwen3-TTS 1.7B: about
