@@ -31,7 +31,8 @@
 namespace ttsfile {
 
 bool generate_tutor_reply(tutor_engine & e, const std::string & text, const std::string & lang,
-                          const std::string & session_id, std::string & reply, std::string * err) {
+                          const std::string & session_id, std::string & reply, std::string * err,
+                          int * n_tokens) {
     if (!e.init || !e.init->model() || !e.init->context() || !e.init->sampler(0)) {
         *err = "tutor chat model is not initialized";
         return false;
@@ -106,6 +107,7 @@ bool generate_tutor_reply(tutor_engine & e, const std::string & text, const std:
     llama_batch batch = llama_batch_get_one(tokens.data(), tokens.size());
     llama_token token = LLAMA_TOKEN_NULL;
     reply.clear();
+    int n_gen = 0;
     for (int i = 0; i < 160; ++i) {
         if (llama_decode(ctx, batch) != 0) {
             *err = "tutor chat model decode failed";
@@ -114,6 +116,7 @@ bool generate_tutor_reply(tutor_engine & e, const std::string & text, const std:
         token = common_sampler_sample(smpl, ctx, -1);
         common_sampler_accept(smpl, token, true);
         if (llama_vocab_is_eog(vocab, token)) break;
+        ++n_gen;
         char piece[4096];
         const int n_piece = llama_token_to_piece(vocab, token, piece, sizeof(piece), 0, true);
         if (n_piece < 0) {
@@ -123,6 +126,7 @@ bool generate_tutor_reply(tutor_engine & e, const std::string & text, const std:
         reply.append(piece, (size_t) n_piece);
         batch = llama_batch_get_one(&token, 1);
     }
+    if (n_tokens) *n_tokens = n_gen;
     reply = ttsfile::detail::trim(reply);
     if (reply.empty()) {
         *err = "tutor chat model returned an empty reply";

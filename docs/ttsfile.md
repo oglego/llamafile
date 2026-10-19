@@ -137,6 +137,25 @@ upload is an independent conversation. Transcripts are capped at 1000 bytes
 per turn. The audio upload limit is 25 MiB. Uploaded audio is forwarded to the
 configured ASR service.
 
+#### Timing a turn
+
+Each speech-to-speech turn logs one line and returns the same numbers in a
+standard `Server-Timing` header (milliseconds):
+
+```
+turn: asr 1.82s | queued 0.00s | chat 2.31s (41 tokens, 17.8 tok/s) | tts 5.10s for 4.40s of audio (0.86x real time) | total 9.31s
+```
+
+```sh
+curl -sS -D - -o reply.wav -F file=@question.wav http://127.0.0.1:8081/v1/audio/speech-to-speech \
+  | grep -i '^server-timing'
+```
+
+`queued` is time spent waiting for the main thread, which is nonzero only when
+another request is ahead of yours. Without streaming, the listener hears
+nothing until `total`. The `tts` stage is the one that streaming can overlap
+with playback; `asr` and `chat` must finish first either way.
+
 ### Streaming
 
 With `"stream": true` the response is sent in chunks as audio is decoded, so

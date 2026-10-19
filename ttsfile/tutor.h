@@ -46,7 +46,9 @@ struct tutor_engine {
 // generates a short reply and records the exchange under `session_id` (if
 // non-empty). Returns false with a message in *err on failure. Runs on the
 // calling thread; callers must serialize access to the engine.
+// If `n_tokens` is non-null it receives the number of tokens generated.
 bool generate_tutor_reply(tutor_engine & e, const std::string & text, const std::string & lang,
-                          const std::string & session_id, std::string & reply, std::string * err);
+                          const std::string & session_id, std::string & reply, std::string * err,
+                          int * n_tokens = nullptr);
 
 }  // namespace ttsfile

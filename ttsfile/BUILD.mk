@@ -16,7 +16,7 @@
 #   make o//ttsfile/argv_utils_test.runs o//ttsfile/audio_channel_test.runs \
 #        o//ttsfile/audio_encode_test.runs o//ttsfile/job_queue_test.runs \
 #        o//ttsfile/languages_test.runs o//ttsfile/speech_request_test.runs \
-#        o//ttsfile/stream_response_test.runs
+#        o//ttsfile/stream_response_test.runs o//ttsfile/timing_test.runs
 #
 # (the unit tests need no model and no GPU.)
 
@@ -50,6 +50,7 @@ TTSFILE_DEP_HDRS := \
 	ttsfile/speech_request.h \
 	ttsfile/stream_response.h \
 	ttsfile/synth.h \
+	ttsfile/timing.h \
 	ttsfile/tutor.h
 
 # Same include set as the llama.cpp tools. main.cpp pulls in httplib, so it
@@ -113,7 +114,7 @@ o/$(MODE)/ttsfile/ttsfile: \
 # Unit tests (no model required)
 # ==============================================================================
 
-TTSFILE_TEST_NAMES := argv_utils_test audio_channel_test audio_encode_test job_queue_test languages_test speech_request_test
+TTSFILE_TEST_NAMES := argv_utils_test audio_channel_test audio_encode_test job_queue_test languages_test speech_request_test timing_test
 TTSFILE_TEST_OBJS  := $(TTSFILE_TEST_NAMES:%=o/$(MODE)/ttsfile/%.cpp.o)
 
 $(TTSFILE_TEST_OBJS): o/$(MODE)/ttsfile/%.cpp.o: ttsfile/%.cpp ttsfile/BUILD.mk $(TTSFILE_DEP_HDRS) $(COSMOCC)

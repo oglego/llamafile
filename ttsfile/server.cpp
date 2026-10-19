@@ -23,6 +23,7 @@
 #include "languages.h"
 #include "speech_request.h"
 #include "stream_response.h"
+#include "timing.h"
 
 #include "log.h"
 
@@ -30,6 +31,7 @@
 #include <nlohmann/json.hpp>
 
 #include <atomic>
+#include <chrono>
 #include <csignal>
 #include <future>
 #include <memory>
@@ -58,6 +60,7 @@ struct job_outcome {
     bool        ok = false;
     std::string err;
     tts_result  result;
+    ttsfile::turn_timing timing;  // filled for speech-to-speech turns
 };
 
 struct tts_job {
@@ -65,6 +68,8 @@ struct tts_job {
     std::string                lang;
     std::string                session_id;
     bool                       tutor = false;
+    double                     asr_s = 0.0;                              // measured by the handler
+    std::chrono::steady_clock::time_point enqueued;                      // for queue-wait timing
     // exactly one of these is used:
     std::promise<job_outcome>                done;     // non-streaming: whole result
     std::shared_ptr<ttsfile::audio_channel>  channel;  // streaming: chunks as produced
@@ -75,8 +80,14 @@ void run_job(tts_engine & e, tutor_engine * tutor, tts_job & job) {
     if (!job.channel) {
         job_outcome out;
         if (job.tutor) {
+            out.timing.asr_s   = job.asr_s;
+            out.timing.queue_s = ttsfile::seconds_since(job.enqueued);
             std::string response;
-            if (!tutor || !generate_tutor_reply(*tutor, job.text, job.lang, job.session_id, response, &out.err)) {
+            const auto t_chat = std::chrono::steady_clock::now();
+            const bool chat_ok = tutor && generate_tutor_reply(*tutor, job.text, job.lang, job.session_id,
+                                                               response, &out.err, &out.timing.chat_tokens);
+            out.timing.chat_s = ttsfile::seconds_since(t_chat);
+            if (!chat_ok) {
                 out.ok = false;
                 if (out.err.empty()) out.err = "speech tutor requires --chat-model";
                 job.done.set_value(std::move(out));
@@ -85,6 +96,10 @@ void run_job(tts_engine & e, tutor_engine * tutor, tts_job & job) {
             job.text = std::move(response);
         }
         out.ok = synthesize(e, job.text, job.lang, out.result, &out.err);
+        if (job.tutor && out.ok) {
+            out.timing.tts_s   = out.result.t_total_s;
+            out.timing.audio_s = out.result.sample_rate > 0 ? (double) out.result.n_samples / out.result.sample_rate : 0.0;
+        }
         job.done.set_value(std::move(out));
         return;
     }
@@ -209,6 +224,7 @@ int run_server(tts_engine & e, tutor_engine * tutor, const std::string & host, i
     // with a local whisper.cpp server, generate a concise tutor reply, then
     // speak it with the already-loaded TTS model.
     svr.Post("/v1/audio/speech-to-speech", [&](const httplib::Request & req, httplib::Response & res) {
+        const auto t_request = std::chrono::steady_clock::now();
         if (!tutor) {
             reply_error(res, 503, "speech tutor requires --chat-model");
             return;
@@ -251,7 +267,9 @@ int run_server(tts_engine & e, tutor_engine * tutor, const std::string & host, i
             for (char & c : lang) c = (char) std::tolower((unsigned char) c);
             fields.push_back({"language", lang, "", ""});
         }
+        const auto t_asr = std::chrono::steady_clock::now();
         auto asr_res = asr.Post("/inference", fields);
+        const double asr_s = ttsfile::seconds_since(t_asr);
         if (!asr_res) {
             reply_error(res, 502, "could not reach the configured whisper-server");
             return;
@@ -294,6 +312,8 @@ int run_server(tts_engine & e, tutor_engine * tutor, const std::string & host, i
         if (job->lang.empty()) job->lang = e.params->tts_lang;
         job->session_id = session_id;
         job->tutor = true;
+        job->asr_s = asr_s;
+        job->enqueued = std::chrono::steady_clock::now();
         auto fut = job->done.get_future();
         if (!queue.push(job)) {
             reply_error(res, 503, "server is busy or shutting down; retry later");
@@ -305,6 +325,10 @@ int run_server(tts_engine & e, tutor_engine * tutor, const std::string & host, i
             reply_error(res, 500, out.err);
             return;
         }
+        ttsfile::turn_timing timing = out.timing;
+        timing.total_s = ttsfile::seconds_since(t_request);
+        LOG_INF("%s\n", ttsfile::timing_summary(timing).c_str());
+        res.set_header("Server-Timing", ttsfile::server_timing_header(timing));
         res.set_content(out.result.wav, "audio/wav");
     });
 
