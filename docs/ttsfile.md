@@ -74,6 +74,14 @@ sends the transcript to a chat model for a short language-practice reply and
 configured TTS model. `--chat-model` and either `--asr-model` or `--asr-url`
 are required for this endpoint; ordinary text-to-speech does not need them.
 
+When the server is running with both models configured, open
+`http://127.0.0.1:8081/` in a browser for a simple push-to-talk client. Allow
+microphone access, record a short turn, then stop to upload it and hear the WAV
+reply. It uses browser `MediaRecorder` plus audio decoding to convert the
+recording to WAV before upload, so use a current browser that supports both.
+The page is served by ttsfile itself; microphone access is available on
+`localhost` without setting up a separate web server.
+
 For development, you can run a local Whisper server and provide its base URL.
 For the single-file setup, bundle `whisper-server` and its model and pass the
 model path with `--asr-model`; ttsfile starts and stops the bundled server:
@@ -224,6 +232,6 @@ byte aborts the connection, so the client sees a truncated transfer.
 * **One voice per server process**, fixed at startup.
 * **Non-streaming requests cannot be cancelled**: only streaming requests stop
   early when the client disconnects.
-* The synthesis loop in `ttsfile/main.cpp` is a copy of upstream's
+* The synthesis loop in `ttsfile/synth.cpp` is a copy of upstream's
   `tools/tts/tts.cpp` loop plus KV-cache/sampler resets between requests. Keep
   the two in step when bumping the llama.cpp submodule.

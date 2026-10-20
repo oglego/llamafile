@@ -24,6 +24,7 @@
 #include "speech_request.h"
 #include "stream_response.h"
 #include "timing.h"
+#include "web_ui.h"
 
 #include "log.h"
 
@@ -161,6 +162,11 @@ int run_server(tts_engine & e, tutor_engine * tutor, const std::string & host, i
 
     svr.Get("/health", [](const httplib::Request &, httplib::Response & res) {
         res.set_content("{\"status\":\"ok\"}", "application/json");
+    });
+
+    svr.Get("/", [](const httplib::Request &, httplib::Response & res) {
+        res.set_header("Cache-Control", "no-store");
+        res.set_content(ttsfile::kWebUi, "text/html; charset=utf-8");
     });
 
     svr.Post("/v1/audio/speech", [&](const httplib::Request & req, httplib::Response & res) {
@@ -342,7 +348,7 @@ int run_server(tts_engine & e, tutor_engine * tutor, const std::string & host, i
     // queue so the loop below ends.
     bool listened = false;
     std::thread http_thread([&] {
-        LOG_INF("ttsfile listening on http://%s:%d (POST /v1/audio/speech, GET /health)\n",
+        LOG_INF("ttsfile listening on http://%s:%d (GET /, POST /v1/audio/speech, GET /health)\n",
                 host.c_str(), port);
         listened = svr.listen(host, port);
         queue.close();

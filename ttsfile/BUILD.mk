@@ -51,7 +51,8 @@ TTSFILE_DEP_HDRS := \
 	ttsfile/stream_response.h \
 	ttsfile/synth.h \
 	ttsfile/timing.h \
-	ttsfile/tutor.h
+	ttsfile/tutor.h \
+	ttsfile/web_ui.h
 
 # Same include set as the llama.cpp tools. main.cpp pulls in httplib, so it
 # must be built with the same TLS macro as httplib.cpp (the macro changes the
