@@ -24,6 +24,7 @@ include whisperfile/BUILD.mk
 include transcribefile/BUILD.mk
 include diffusionfile/BUILD.mk
 include agentfile/BUILD.mk
+include ttsfile/BUILD.mk
 include tests/BUILD.mk
 endif
 
@@ -39,6 +40,7 @@ o/$(MODE)/:	o/$(MODE)/llamafile	\
 		o/$(MODE)/transcribefile \
 		o/$(MODE)/diffusionfile \
 		o/$(MODE)/agentfile \
+		o/$(MODE)/ttsfile \
 		o/$(MODE)/third_party/zipalign
 
 .PHONY: install
@@ -52,6 +54,7 @@ install:	o/$(MODE)/llamafile/llamafile \
 	$(INSTALL) o/$(MODE)/diffusionfile/diffusionfile $(PREFIX)/bin/diffusionfile
 	$(INSTALL) o/$(MODE)/agentfile/agentfile $(PREFIX)/bin/agentfile
 	$(INSTALL) o/$(MODE)/transcribefile/transcribefile $(PREFIX)/bin/transcribefile
+	$(INSTALL) o/$(MODE)/ttsfile/ttsfile $(PREFIX)/bin/ttsfile
 	$(INSTALL) o/$(MODE)/third_party/zipalign/zipalign $(PREFIX)/bin/zipalign
 	mkdir -p $(PREFIX)/share/man/man1
 	$(INSTALL) -m 0644 whisperfile/whisperfile.1 $(PREFIX)/share/man/man1/whisperfile.1
