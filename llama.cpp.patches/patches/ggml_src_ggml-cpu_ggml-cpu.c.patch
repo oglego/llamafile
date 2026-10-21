@@ -67,7 +67,7 @@ diff --git a/ggml/src/ggml-cpu/ggml-cpu.c b/ggml/src/ggml-cpu/ggml-cpu.c
 +                        extern size_t llamafile_mixmul_needs(const struct ggml_tensor *,
 +                                                              const struct ggml_tensor *,
 +                                                              const struct ggml_tensor *);
-+                        size_t cur2 = llamafile_mixmul_needs(src0, src1, ids);
++                        size_t cur2 = llamafile_mixmul_needs(node->src[0], node->src[1], node->src[2]);
 +                        if (cur2 > cur) cur = cur2;
 +#endif
                      } break;

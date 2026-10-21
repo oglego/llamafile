@@ -197,19 +197,21 @@ diff --git a/tools/server/server.cpp b/tools/server/server.cpp
      }
  
      // register signal handler if not running by CLI
-@@ -569,6 +696,11 @@ int llama_server(common_params & params, int argc, char ** argv, server_child &
+@@ -569,6 +696,13 @@ int llama_server(common_params & params, int argc, char ** argv, server_child &
          // when the HTTP server stops, clean up and exit
          clean_up();
      } else {
 +        // Notify caller that server is ready (for combined mode TUI startup)
 +        if (on_ready) {
-+            on_ready(ctx_http.listening_address);
++            if (!ctx_http.listening_addresses.empty()) {
++                on_ready(ctx_http.listening_addresses.front());
++            }
 +        }
 +
          // optionally, notify router server that this instance is ready
          std::thread monitor_thread;
          if (child.is_child()) {
-@@ -591,5 +723,56 @@ int llama_server(common_params & params, int argc, char ** argv, server_child &
+@@ -591,5 +725,56 @@ int llama_server(common_params & params, int argc, char ** argv, server_child &
          }
      }
  
