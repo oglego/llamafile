@@ -1,7 +1,7 @@
 diff --git a/common/common.cpp b/common/common.cpp
 --- a/llama.cpp/common/common.cpp
 +++ b/llama.cpp/common/common.cpp
-@@ -34,6 +34,10 @@
+@@ -38,6 +38,10 @@
  #include <sys/sysctl.h>
  #endif
  
@@ -12,7 +12,7 @@ diff --git a/common/common.cpp b/common/common.cpp
  #if defined(_WIN32)
  #define WIN32_LEAN_AND_MEAN
  #ifndef NOMINMAX
-@@ -76,7 +80,38 @@ common_time_meas::~common_time_meas() {
+@@ -79,7 +83,38 @@ common_time_meas::~common_time_meas() {
  //
  
  int32_t common_cpu_get_num_physical_cores() {
@@ -52,49 +52,41 @@ diff --git a/common/common.cpp b/common/common.cpp
      int32_t logical_cpus = _system_configuration.ncpus;
      int32_t smt_threads = _system_configuration.smt_threads;
      if (smt_threads > 0) {
-@@ -1059,6 +1094,20 @@ std::string fs_get_cache_directory() {
-         if (cache_directory.empty()) {
-             throw std::runtime_error("Failed to find %LOCALAPPDATA% directory");
-         }
+@@ -996,6 +1031,16 @@ std::filesystem::path fs_get_cache_directory() {
+     if (cache_directory.empty()) {
+         throw std::runtime_error("Failed to find %LOCALAPPDATA% directory");
+     }
 +#elif defined(COSMOCC)
-+        // We don't know what OS we are running on at compile time, just CPU
-+        // architecture. Try various environment variables, fall back to ~/.cache.
-+        cache_directory = common_get_env("LOCALAPPDATA");
-+        if (cache_directory.empty()) {
-+            cache_directory = common_get_env("XDG_CACHE_HOME");
-+        }
-+        if (cache_directory.empty()) {
-+            const std::string home = common_get_env("HOME");
-+            if (home.empty()) {
-+                throw std::runtime_error("Failed to find $HOME directory");
-+            }
-+            cache_directory = home + "/.cache/";
-+        }
- #elif defined(__EMSCRIPTEN__)
-         GGML_ABORT("not implemented on this platform");
++    // We don't know what OS we are running on at compile time, just CPU
++    // architecture. Try various environment variables, fall back to ~/.cache.
++    cache_directory = common_get_path_from_env("LOCALAPPDATA");
++    if (cache_directory.empty()) {
++        cache_directory = common_get_path_from_env("XDG_CACHE_HOME");
++    }
++    if (cache_directory.empty()) {
++        cache_directory = get_home_directory() / ".cache";
++    }
+ #elif defined(__APPLE__)
+     cache_directory = get_home_directory() / "Library/Caches";
  #else
-@@ -1104,6 +1153,20 @@ std::string fs_get_config_directory() {
+@@ -1014,6 +1059,16 @@ std::filesystem::path fs_get_config_directory() {
      if (config_directory.empty()) {
          throw std::runtime_error("Failed to find %APPDATA% directory");
      }
 +#elif defined(COSMOCC)
 +    // We don't know what OS we are running on at compile time, just CPU
 +    // architecture. Try various environment variables, fall back to ~/.config.
-+    config_directory = common_get_env("APPDATA");
++    config_directory = common_get_path_from_env("APPDATA");
 +    if (config_directory.empty()) {
-+        config_directory = common_get_env("XDG_CONFIG_HOME");
++        config_directory = common_get_path_from_env("XDG_CONFIG_HOME");
 +    }
 +    if (config_directory.empty()) {
-+        const std::string home = common_get_env("HOME");
-+        if (home.empty()) {
-+            throw std::runtime_error("Failed to find $HOME directory");
-+        }
-+        config_directory = home + "/.config/";
++        config_directory = get_home_directory() / ".config";
 +    }
- #elif defined(__EMSCRIPTEN__)
-     // caller decides what to do when there is no config directory
-     throw std::runtime_error("not implemented on this platform");
-@@ -1296,6 +1359,26 @@ common_init_result::common_init_result(common_params & params, bool model_only)
+ #else
+     config_directory = common_get_path_from_env("XDG_CONFIG_HOME");
+     if (config_directory.empty()) {
+@@ -1250,6 +1305,26 @@ common_init_result::common_init_result(common_params & params, bool model_only)
          COM_TRC("%s", "fitting params to device memory ...\n");
          COM_TRC("%s", "(for bugs during this step try to reproduce them with -fit off, or provide --verbose logs if the bug only occurs with -fit on)\n");
  
@@ -121,7 +113,7 @@ diff --git a/common/common.cpp b/common/common.cpp
          // the draft context is created from the same base params and follows the main context, fit both together
          const bool has_draft = params.speculative.has_dft();
          const bool spec_mtp  = std::find(params.speculative.types.begin(), params.speculative.types.end(),
-@@ -1320,7 +1403,7 @@ common_init_result::common_init_result(common_params & params, bool model_only)
+@@ -1274,7 +1349,7 @@ common_init_result::common_init_result(common_params & params, bool model_only)
          common_fit_params(params.model.path.c_str(), &mparams, &cparams,
              params.tensor_split,
              params.tensor_buft_overrides.data(),
