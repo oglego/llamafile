@@ -34,7 +34,6 @@ GGML_SRCS_CPP := \
 	llama.cpp/ggml/src/ggml-cpu/binary-ops.cpp \
 	llama.cpp/ggml/src/ggml-cpu/ggml-cpu.cpp \
 	llama.cpp/ggml/src/ggml-cpu/hbm.cpp \
-	llama.cpp/ggml/src/ggml-cpu/iqp.cpp \
 	llama.cpp/ggml/src/ggml-cpu/ops.cpp \
 	llama.cpp/ggml/src/ggml-cpu/repack.cpp \
 	llama.cpp/ggml/src/ggml-cpu/traits.cpp \
