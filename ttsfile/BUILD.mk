@@ -31,7 +31,8 @@ PKGS += TTSFILE
 # ==============================================================================
 
 TTSFILE_OBJS := \
-	o/$(MODE)/ttsfile/ttsfile.o
+	o/$(MODE)/ttsfile/ttsfile.o \
+	o/$(MODE)/ttsfile/tts-server.o
 
 # upstream tools/tts/tts.cpp, with main() renamed
 TTSFILE_UPSTREAM_OBJ := o/$(MODE)/ttsfile/tts.upstream.o
@@ -51,6 +52,7 @@ TTSFILE_INCLUDES := \
 	-iquote llama.cpp/ggml/include \
 	-iquote llama.cpp/tools/mtmd \
 	-isystem llama.cpp/vendor \
+	-isystem llama.cpp/vendor/cpp-httplib \
 	-isystem third_party/mbedtls/include
 
 TTSFILE_CPPFLAGS := \
@@ -65,6 +67,10 @@ TTSFILE_CPPFLAGS := \
 # ==============================================================================
 
 o/$(MODE)/ttsfile/ttsfile.o: ttsfile/ttsfile.cpp ttsfile/BUILD.mk $(COSMOCC)
+	@mkdir -p $(@D)
+	$(COMPILE.cc) $(TTSFILE_CPPFLAGS) -o $@ $<
+
+o/$(MODE)/ttsfile/tts-server.o: ttsfile/tts-server.cpp ttsfile/BUILD.mk $(COSMOCC)
 	@mkdir -p $(@D)
 	$(COMPILE.cc) $(TTSFILE_CPPFLAGS) -o $@ $<
 
