@@ -198,6 +198,7 @@ want to perform:
 | `whisperfile` | Speech-to-text, built on [whisper.cpp](https://github.com/ggml-org/whisper.cpp). See the [whisperfile docs](whisperfile/index.md). |
 | `transcribefile` | Speech-to-text, built on [transcribe.cpp](https://github.com/handy-computer/transcribe.cpp). |
 | `diffusionfile` | Image generation (Stable Diffusion). |
+| `ttsfile` | Text-to-speech (Qwen3-TTS, Pocket TTS), built on llama.cpp's `llama-tts`. See [ttsfile/README.md](../ttsfile/README.md). |
 | `zipalign` | A small utility for embedding weights or other assets into a llamafile. |
 
 #### `llamafile` vs `llamafile-thin`
