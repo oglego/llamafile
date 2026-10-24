@@ -23,6 +23,7 @@ include llamafile/BUILD.mk
 include whisperfile/BUILD.mk
 include transcribefile/BUILD.mk
 include diffusionfile/BUILD.mk
+include ttsfile/BUILD.mk
 include agentfile/BUILD.mk
 include tests/BUILD.mk
 endif
@@ -38,6 +39,7 @@ o/$(MODE)/:	o/$(MODE)/llamafile	\
 		o/$(MODE)/transcribe.cpp \
 		o/$(MODE)/transcribefile \
 		o/$(MODE)/diffusionfile \
+		o/$(MODE)/ttsfile \
 		o/$(MODE)/agentfile \
 		o/$(MODE)/third_party/zipalign
 
@@ -50,6 +52,7 @@ install:	o/$(MODE)/llamafile/llamafile \
 	$(INSTALL) o/$(MODE)/llamafile/llamafile $(PREFIX)/bin/llamafile
 	$(INSTALL) o/$(MODE)/whisperfile/whisperfile $(PREFIX)/bin/whisperfile
 	$(INSTALL) o/$(MODE)/diffusionfile/diffusionfile $(PREFIX)/bin/diffusionfile
+	$(INSTALL) o/$(MODE)/ttsfile/ttsfile $(PREFIX)/bin/ttsfile
 	$(INSTALL) o/$(MODE)/agentfile/agentfile $(PREFIX)/bin/agentfile
 	$(INSTALL) o/$(MODE)/transcribefile/transcribefile $(PREFIX)/bin/transcribefile
 	$(INSTALL) o/$(MODE)/third_party/zipalign/zipalign $(PREFIX)/bin/zipalign

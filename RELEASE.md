@@ -52,6 +52,7 @@ llamafile-<version>
 |   |-- diffusionfile
 |   |-- llamafile
 |   |-- transcribefile
+|   |-- ttsfile
 |   |-- whisperfile
 |   `-- zipalign
 `-- share
@@ -80,6 +81,7 @@ The following binaries are part of the release:
 - `whisperfile`
 - `diffusionfile`
 - `transcribefile`
+- `ttsfile`
 - `agentfile`
 
 You can use the script to create the appropriately named binaries:

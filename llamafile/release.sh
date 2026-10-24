@@ -36,7 +36,7 @@ DEST_DIR="${RELEASE_DIR}/release"
 mkdir "${DEST_DIR}"
 
 # list of binaries to copy and rename
-BINARIES="llamafile zipalign whisperfile diffusionfile transcribefile agentfile"
+BINARIES="llamafile zipalign whisperfile diffusionfile transcribefile ttsfile agentfile"
 
 for binary in $BINARIES; do
   if [ -f "${ZIP_DIR}/bin/${binary}" ]; then
