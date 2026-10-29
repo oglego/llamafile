@@ -62,14 +62,26 @@ echo "[smoke] layer 2 — qwen3-tts end-to-end"
 
 MODEL="${TTSFILE_QWEN3_GGUF:-}"
 MMPROJ="${TTSFILE_QWEN3_MMPROJ:-}"
-if [ -z "$MODEL" ] || [ ! -f "$MODEL" ] || [ -z "$MMPROJ" ] || [ ! -f "$MMPROJ" ]; then
-    echo "  SKIP qwen3-tts end-to-end: TTSFILE_QWEN3_GGUF and" \
-         "TTSFILE_QWEN3_MMPROJ not set or files missing" >&2
+missing=()
+for v in TTSFILE_QWEN3_GGUF TTSFILE_QWEN3_MMPROJ; do
+    p="${!v:-}"
+    if [ -z "$p" ]; then
+        missing+=("$v is not set")
+    elif [ ! -f "$p" ]; then
+        missing+=("$v: no such file '$p'")
+    fi
+done
+if [ "${#missing[@]}" -gt 0 ]; then
+    echo "  SKIP qwen3-tts end-to-end:" >&2
+    printf '       %s\n' "${missing[@]}" >&2
     echo "       (set both to a Qwen3-TTS GGUF pair to run this layer)" >&2
     exit 0
 fi
 
-args=(-m "$MODEL" -mm "$MMPROJ" -n 100)   # ~8 s of audio at 12.5 frames/s
+# -n 100 is ~8 s of audio at 12.5 frames/s. -c caps the context window: left
+# unset, llama.cpp sizes it to the model's full training context, and the KV
+# cache can exhaust GPU memory (seen as a Metal out-of-memory at frame 2).
+args=(-m "$MODEL" -mm "$MMPROJ" -n 100 -c 2048)
 SPEAKER="${TTSFILE_SPEAKER:-}"
 if [ -n "$SPEAKER" ] && [ -f "$SPEAKER" ]; then
     args+=(--tts-speaker-file "$SPEAKER")
@@ -93,13 +105,19 @@ check_wav() {
 }
 
 # -p text, file output.
-"$APE" "${args[@]}" -p "Hello from the ttsfile smoke test." -o "$TMP/prompt.wav" \
-    >/dev/null 2>&1 </dev/null || fail "-p run exited non-zero"
+if ! "$APE" "${args[@]}" -p "Hello from the ttsfile smoke test." -o "$TMP/prompt.wav" \
+        >"$TMP/prompt.log" 2>&1 </dev/null; then
+    tail -n 20 "$TMP/prompt.log" >&2
+    fail "-p run exited non-zero"
+fi
 secs=$(check_wav "$TMP/prompt.wav" "-p run")
 pass "-p text produces a WAV (${secs}s)"
 
 # Implicit stdin text (no -p) with the WAV written to stdout via -o -.
-printf 'Hello from standard input.\n' | "$APE" "${args[@]}" -o - \
-    >"$TMP/stdin.wav" 2>/dev/null || fail "stdin run exited non-zero"
+if ! printf 'Hello from standard input.\n' | "$APE" "${args[@]}" -o - \
+        >"$TMP/stdin.wav" 2>"$TMP/stdin.log"; then
+    tail -n 20 "$TMP/stdin.log" >&2
+    fail "stdin run exited non-zero"
+fi
 secs=$(check_wav "$TMP/stdin.wav" "stdin run")
 pass "stdin text to stdout (-o -) produces a WAV (${secs}s)"
