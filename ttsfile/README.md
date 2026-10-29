@@ -39,6 +39,25 @@ To generate longer audio, set `-n` to 12.5 × the seconds you want:
 ttsfile -m model.gguf -mm mmproj.gguf -p "A long script..." -n 2500 -o out.wav   # ~200 s
 ```
 
+## Context size
+
+ttsfile defaults the context window to 2048 tokens (`-c 2048`). Left unset,
+llama.cpp sizes the context to the model's full training window, and the
+resulting KV cache can run a GPU out of memory before any audio is produced
+(on Apple Silicon this shows up as a Metal "Insufficient Memory" error).
+
+Long text is generated in chunks, and each chunk is dropped from the context
+once it is done, so this bounds one chunk, not the length of the audio. A
+long speaker reference uses part of the window, so raise it if loading a
+large reference fails:
+
+```sh
+ttsfile -m model.gguf -mm mmproj.gguf --tts-speaker-file long-ref.wav -c 4096 -p "Hello" -o out.wav
+```
+
+Pass `-c` (or `--ctx-size`, or set `LLAMA_ARG_CTX_SIZE`) to choose your own
+value, or `-c 0` for the model's full window.
+
 ## Scripting
 
 - `-p -` reads the text to speak from stdin.
@@ -82,8 +101,6 @@ cat > .args <<'ARGS'
 /zip/mmproj-Qwen3-TTS-12Hz-1.7B-Base-Q8_0.gguf
 --tts-speaker-file
 /zip/speaker.wav
--c
-2048
 -n
 2500
 ...
@@ -161,8 +178,6 @@ cat > .args <<'EOF'
 /zip/Qwen3-TTS-12Hz-1.7B-Base-Q4_K_M.gguf
 -mm
 /zip/mmproj-Qwen3-TTS-12Hz-1.7B-Base-Q8_0.gguf
--c
-2048
 ...
 EOF
 
@@ -183,7 +198,8 @@ Run the bundled executable with text and an output path:
 
 - `ttsfile/ttsfile.cpp` is the entry point: CPU check, crash reports,
   `--version`, `/zip/.args` defaults, GPU backend registration, the stdin and
-  stdout helpers above, then it hands argv to upstream's CLI.
+  stdout helpers above, the default context size, then it hands argv to
+  upstream's CLI.
 - `ttsfile/BUILD.mk` compiles upstream `llama.cpp/tools/tts/tts.cpp` with
   `-Dmain=tts_cli_main` so its `main` can be called from `ttsfile.cpp`. No
   patch to llama.cpp is required.

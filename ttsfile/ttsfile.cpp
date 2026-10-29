@@ -18,6 +18,7 @@
 
 #include <cosmo.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -33,6 +34,14 @@
 // ttsfile/BUILD.mk compiles that file with -Dmain=tts_cli_main so its
 // main() becomes this function and can be called from here.
 int tts_cli_main(int argc, char ** argv);
+
+// Default context window. Left unset, llama.cpp sizes the context to the
+// model's full training window (n_ctx = 0), and the KV cache can exhaust GPU
+// memory before the first frames are generated. Each text chunk is generated
+// on top of the voice conditioning and then dropped, so this bounds a single
+// chunk, not the length of the audio. Override with -c / --ctx-size
+// (-c 0 restores the model's full window).
+static const int DEFAULT_CTX_SIZE = 2048;
 
 static std::string read_all_stdin() {
     std::string text((std::istreambuf_iterator<char>(std::cin)), std::istreambuf_iterator<char>());
@@ -50,16 +59,21 @@ static bool is_flag(const char * a, const char * x, const char * y = nullptr) {
 //   -p -            read the text to speak from stdin
 //   (no -p at all)  if stdin is piped, read the text from it
 //   -o -            write the WAV to stdout
+//   (no -c at all)  default the context window to DEFAULT_CTX_SIZE
 // Rewrites argv into `storage`/`out` and returns the new argc.
 static int apply_stdio_args(int argc, char ** argv, std::vector<std::string> & storage, std::vector<char *> & out) {
     bool has_prompt = false;
     bool no_run     = false; // --help / --version style invocations
+    // LLAMA_ARG_CTX_SIZE is how llama.cpp reads -c from the environment; a
+    // value there is the user's choice, and an injected -c would override it.
+    bool has_ctx    = getenv("LLAMA_ARG_CTX_SIZE") != nullptr;
     for (int i = 1; i < argc; i++) {
         if (is_flag(argv[i], "-p", "--prompt")) has_prompt = true;
+        if (is_flag(argv[i], "-c", "--ctx-size")) has_ctx = true;
         if (is_flag(argv[i], "-h", "--help") || is_flag(argv[i], "--version")) no_run = true;
     }
 
-    storage.reserve(argc + 2);
+    storage.reserve(argc + 4);
     for (int i = 0; i < argc; i++) {
         std::string a = argv[i];
         if (i > 0 && i + 1 < argc) {
@@ -86,6 +100,11 @@ static int apply_stdio_args(int argc, char ** argv, std::vector<std::string> & s
             storage.push_back("-p");
             storage.push_back(text);
         }
+    }
+
+    if (!has_ctx && !no_run) {
+        storage.push_back("-c");
+        storage.push_back(std::to_string(DEFAULT_CTX_SIZE));
     }
 
     for (auto & s : storage) out.push_back(&s[0]);
