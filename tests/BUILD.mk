@@ -197,6 +197,23 @@ o/$(MODE)/tests/transcribefile_smoke.runs: \
 	@touch $@
 
 # ==============================================================================
+# Smoke test: ttsfile APE
+# ==============================================================================
+#
+# Subprocess-style regression on the ttsfile binary itself.
+#   Layer 1: model-free probes (--version, --help, missing model) — always runs.
+#   Layer 2: qwen3-tts end-to-end, gated on TTSFILE_QWEN3_GGUF and
+#            TTSFILE_QWEN3_MMPROJ (skip-on-missing, never fails `make check`
+#            for absent models).
+
+o/$(MODE)/tests/ttsfile_smoke.runs: \
+		o/$(MODE)/ttsfile/ttsfile \
+		tests/ttsfile_smoke.sh
+	@mkdir -p $(@D)
+	bash tests/ttsfile_smoke.sh o/$(MODE)/ttsfile/ttsfile
+	@touch $@
+
+# ==============================================================================
 # Phony targets
 # ==============================================================================
 
@@ -206,4 +223,5 @@ o/$(MODE)/tests: \
 	o/$(MODE)/tests/fa_helpers_test.runs \
 	o/$(MODE)/tests/gpu_backend_test.runs \
 	o/$(MODE)/tests/sandbox_test.runs \
-	o/$(MODE)/tests/transcribefile_smoke.runs
+	o/$(MODE)/tests/transcribefile_smoke.runs \
+	o/$(MODE)/tests/ttsfile_smoke.runs

@@ -111,7 +111,8 @@ and a speaker-reference recording from Kyutai's voice collection. The GGUF
 conversion is licensed CC BY 4.0. The `alba-mackenna/casual.wav` recording is
 also CC BY 4.0; retain attribution if you redistribute it.
 
-Run these commands from the repository root:
+Build `ttsfile` and `zipalign` as in [Quick start](#quick-start), then run
+these commands from the repository root:
 
 ```sh
 hf download EryriLabs/pocket-tts-GGUF \
@@ -122,10 +123,6 @@ hf download EryriLabs/pocket-tts-GGUF \
 curl -L \
     https://huggingface.co/kyutai/tts-voices/resolve/main/alba-mackenna/casual.wav \
     -o speaker.wav
-
-make setup                                            # once: submodules + patches
-.cosmocc/4.0.2/bin/make -j8 o//ttsfile
-.cosmocc/4.0.2/bin/make -j8 o//third_party/zipalign
 
 cat > .args <<'ARGS'
 -m
@@ -148,21 +145,9 @@ o//third_party/zipalign/zipalign -j0 pocket-tts-voice.llamafile \
 
 The sample voice is hosted in [Kyutai's TTS voice collection](https://huggingface.co/kyutai/tts-voices), which lists the licenses for its recordings. Pocket TTS requires a speaker-reference file; the English model uses English text.
 
-To skip the speaker reference for a smaller bundle (Qwen3-TTS Base only;
-quality is better with one), drop `--tts-speaker-file` and `/zip/speaker.wav`
-from `.args` and from the `zipalign` command.
-
-## How it fits together
-
-- `ttsfile/ttsfile.cpp` is the entry point: CPU check, crash reports,
-  `--version`, `/zip/.args` defaults, GPU backend registration, the stdin and
-  stdout helpers above, then it hands argv to upstream's CLI.
-- `ttsfile/BUILD.mk` compiles upstream `llama.cpp/tools/tts/tts.cpp` with
-  `-Dmain=tts_cli_main` so its `main` can be called from `ttsfile.cpp`. No
-  patch to llama.cpp is required.
-- Linking needs `$(HTTPLIB_OBJS)` and `mbedtls.a` alongside `llama.cpp.a`
-  because upstream `common` is built with `-DLLAMA_USE_HTTPLIB` (for `-hf`
-  downloads).
+The default 512-frame cap applies here too (see [Output length](#output-length)).
+Add `-n` to `.args` or the command line for longer text. How many seconds a
+frame covers depends on the model, so check the length of your output.
 
 ## Package without a speaker reference
 
@@ -193,3 +178,15 @@ Run the bundled executable with text and an output path:
 ```sh
 ./qwen3-tts-no-reference.llamafile -p "Hello from Qwen3-TTS" -o out.wav
 ```
+
+## How it fits together
+
+- `ttsfile/ttsfile.cpp` is the entry point: CPU check, crash reports,
+  `--version`, `/zip/.args` defaults, GPU backend registration, the stdin and
+  stdout helpers above, then it hands argv to upstream's CLI.
+- `ttsfile/BUILD.mk` compiles upstream `llama.cpp/tools/tts/tts.cpp` with
+  `-Dmain=tts_cli_main` so its `main` can be called from `ttsfile.cpp`. No
+  patch to llama.cpp is required.
+- Linking needs `$(HTTPLIB_OBJS)` and `mbedtls.a` alongside `llama.cpp.a`
+  because upstream `common` is built with `-DLLAMA_USE_HTTPLIB` (for `-hf`
+  downloads).
